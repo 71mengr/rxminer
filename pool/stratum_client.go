@@ -128,7 +128,7 @@ return
 }
 
 if len(msg.Result) > 0 && string(msg.Result) != "null" {
-c.handleLoginResult(msg.Result)
+c.handleResult(msg.Result)
 }
 
 switch msg.Method {
@@ -137,12 +137,30 @@ c.handleJobPayload(msg.Params)
 }
 }
 
+func (c *StratumClient) handleResult(result json.RawMessage) {
+var res map[string]json.RawMessage
+if err := json.Unmarshal(result, &res); err != nil {
+return
+}
+
+if method, ok := rawString(res["method"]); ok && method == "job" {
+c.handleJobPayload(res["params"])
+return
+}
+
+c.handleLoginResultFromMap(res)
+}
+
 func (c *StratumClient) handleLoginResult(result json.RawMessage) {
 var res map[string]json.RawMessage
 if err := json.Unmarshal(result, &res); err != nil {
 return
 }
 
+c.handleLoginResultFromMap(res)
+}
+
+func (c *StratumClient) handleLoginResultFromMap(res map[string]json.RawMessage) {
 if id, ok := rawString(res["id"]); ok {
 c.mu.Lock()
 c.sessionID = id
@@ -165,7 +183,7 @@ return
 
 var job map[string]json.RawMessage
 if err := json.Unmarshal(payload, &job); err == nil {
-c.storeJob(jobIDFromMap(job), stringFromMap(job, "blob"), stringFromMap(job, "target"), stringFromMap(job, "seed_hash", "seedHash"), uint64FromMap(job, "height"))
+c.storeJob(jobIDFromMap(job), stringFromMap(job, "blob", "seal_hash", "sealHash"), stringFromMap(job, "target"), stringFromMap(job, "seed_hash", "seedHash"), uint64FromMap(job, "height"))
 return
 }
 
@@ -176,12 +194,25 @@ return
 
 jobID, _ := rawString(params[0])
 blob, _ := rawString(params[1])
-target, _ := rawString(params[2])
+
+var target string
+var seedHash string
 var height uint64
 if len(params) > 3 {
+if value, ok := rawString(params[3]); ok {
+seedHash, _ = rawString(params[2])
+target = value
+if len(params) > 4 {
+height, _ = rawUint64(params[4])
+}
+} else {
+target, _ = rawString(params[2])
 height, _ = rawUint64(params[3])
 }
-c.storeJob(jobID, blob, target, "", height)
+} else {
+target, _ = rawString(params[2])
+}
+c.storeJob(jobID, blob, target, seedHash, height)
 }
 
 func (c *StratumClient) storeJob(jobID, blob, target, seedHash string, height uint64) {
@@ -273,12 +304,7 @@ if sessionID == "" {
 sessionID = c.address
 }
 
-params := map[string]interface{}{
-"id":     sessionID,
-"job_id": jobID,
-"nonce":  nonceHex,
-"result": mixDigestHex,
-}
+params := []string{sessionID, jobID, nonceHex, mixDigestHex}
 
 req := StratumMessage{
 ID:     2,
