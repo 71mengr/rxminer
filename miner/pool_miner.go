@@ -13,7 +13,7 @@ import (
 "rxminer/randomx"
 )
 
-type Miner struct {
+type PoolMiner struct {
 pool     *pool.StratumClient
 address  string
 threads  int
@@ -24,7 +24,7 @@ rejected uint64
 boost    bool
 }
 
-func NewPoolMiner(poolURL, address, password string, threads int, boost bool) (*Miner, error) {
+func NewPoolMiner(poolURL, address, password string, threads int, boost bool) (*PoolMiner, error) {
 if threads <= 0 {
 threads = runtime.NumCPU()
 }
@@ -39,7 +39,7 @@ fmt.Printf("✅ Connected to pool: %s\n", poolURL)
 fmt.Printf("✅ Mining address: %s\n", address)
 fmt.Println()
 
-return &Miner{
+return &PoolMiner{
 pool:     client,
 address:  address,
 threads:  threads,
@@ -47,7 +47,7 @@ boost:    boost,
 }, nil
 }
 
-func (m *Miner) GetWork() (sealHash, seedHash []byte, target *big.Int, height uint64, err error) {
+func (m *PoolMiner) GetWork() (sealHash, seedHash []byte, target *big.Int, height uint64, err error) {
 sealHashHex, seedHashHex, targetHex, height, err := m.pool.GetWork()
 if err != nil {
 return nil, nil, nil, 0, err
@@ -60,11 +60,11 @@ target = hexToBig(targetHex)
 return sealHash, seedHash, target, height, nil
 }
 
-func (m *Miner) SubmitWork(nonce uint64, sealHash, mixDigest []byte) error {
-return m.pool.SubmitWork(nonce, sealHash, mixDigest)
+func (m *PoolMiner) SubmitWork(nonce uint64, sealHash, mixDigest []byte) error {
+return m.pool.SubmitWork(nonce, mixDigest)
 }
 
-func (m *Miner) Start() {
+func (m *PoolMiner) Start() {
 fmt.Printf("Starting RandomX miner with %d threads\n", m.threads)
 if m.boost {
 fmt.Println("⚡ BOOST MODE ENABLED")
@@ -88,7 +88,7 @@ fmt.Println()
 fmt.Println("⛏️  Mining... Press Ctrl+C to stop")
 fmt.Println()
 
-work := &Work{
+work := &PoolWork{
 SealHash: sealHash,
 SeedHash: seedHash,
 Target:   target,
@@ -104,7 +104,7 @@ go m.monitorHashrate()
 select {}
 }
 
-func (m *Miner) mineThread(threadID int, initialWork *Work) {
+func (m *PoolMiner) mineThread(threadID int, initialWork *PoolWork) {
 flags := randomx.RANDOMX_FLAG_JIT | randomx.RANDOMX_FLAG_HARD_AES
 if m.boost {
 flags |= randomx.RANDOMX_FLAG_LARGE_PAGES
@@ -148,7 +148,7 @@ for atomic.LoadInt32(&m.stop) == 0 {
 if hashes%10000 == 0 {
 newSealHash, newSeedHash, newTarget, newHeight, err := m.GetWork()
 if err == nil && !bytesEqual(newSealHash, work.SealHash) {
-work = &Work{
+work = &PoolWork{
 SealHash: newSealHash,
 SeedHash: newSeedHash,
 Target:   newTarget,
@@ -199,7 +199,7 @@ nonce++
 }
 }
 
-func (m *Miner) monitorHashrate() {
+func (m *PoolMiner) monitorHashrate() {
 ticker := time.NewTicker(10 * time.Second)
 defer ticker.Stop()
 
@@ -227,7 +227,7 @@ lastTime = currentTime
 }
 }
 
-func (m *Miner) Stop() {
+func (m *PoolMiner) Stop() {
 atomic.StoreInt32(&m.stop, 1)
 if m.pool != nil {
 m.pool.Close()
@@ -251,19 +251,8 @@ bigInt.SetString(hexStr, 16)
 return bigInt
 }
 
-func bytesEqual(a, b []byte) bool {
-if len(a) != len(b) {
-return false
-}
-for i := range a {
-if a[i] != b[i] {
-return false
-}
-}
-return true
-}
 
-type Work struct {
+type PoolWork struct {
 SealHash []byte
 SeedHash []byte
 Target   *big.Int
