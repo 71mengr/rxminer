@@ -30,7 +30,7 @@ fmt.Printf("Difficulty: %d\n", cfg.Pool.Difficulty)
 fmt.Printf("Pool Fee: %d%%\n", cfg.Pool.Fee)
 fmt.Printf("Daemon: %s\n", cfg.Daemon.URL)
 fmt.Printf("Pool Address: %s\n", cfg.Daemon.Address)
-fmt.Printf("Web Interface: http://localhost:%d\n", *webPort)
+fmt.Printf("Web Interface: %s\n", pool.ExternalWebURL(*webPort))
 fmt.Println()
 
 // Connect to Redis

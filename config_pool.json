@@ -1,6 +1,6 @@
 {
 "pool": {
-"listen": ":3333",
+"listen": ":26000",
 "difficulty": 1000,
 "maxConn": 100,
 "timeout": "30s",

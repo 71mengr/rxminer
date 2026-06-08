@@ -66,7 +66,7 @@ http.HandleFunc("/api/blocks", w.handleAPIBlocks)
 http.HandleFunc("/static/", w.handleStatic)
 
 addr := fmt.Sprintf(":%d", port)
-fmt.Printf("Web server listening on http://localhost%s\n", addr)
+fmt.Printf("Web server listening on %s\n", ExternalWebURL(port))
 
 return http.ListenAndServe(addr, nil)
 }
