@@ -108,12 +108,3 @@ return err
 func (p *PaymentProcessor) Stop() {
 close(p.stopCh)
 }
-
-func hexToBig(hexStr string) *big.Int {
-if len(hexStr) >= 2 && hexStr[:2] == "0x" {
-hexStr = hexStr[2:]
-}
-bigInt := new(big.Int)
-bigInt.SetString(hexStr, 16)
-return bigInt
-}

@@ -8,11 +8,9 @@ import (
 "fmt"
 "math/big"
 "net"
-"strings"
 "sync"
 "time"
 
-"rxminer/randomx"
 "rxminer/rpc"
 )
 
@@ -173,7 +171,6 @@ miner.Conn.Write(append(data, '\n'))
 func (s *StratumServer) handleConnection(conn net.Conn) {
 defer conn.Close()
 
-ip := conn.RemoteAddr().String()
 scanner := bufio.NewScanner(conn)
 
 for scanner.Scan() {
@@ -268,8 +265,7 @@ if len(nonceBytes) >= 8 {
 nonce = binary.BigEndian.Uint64(nonceBytes[:8])
 }
 
-// Parse seal hash and mix digest
-sealHashBytes, _ := hex.DecodeString(strings.TrimPrefix(s.currentJob.SealHash, "0x"))
+// Parse mix digest
 mixDigestBytes, _ := hex.DecodeString(mixDigestHex)
 
 // Submit to daemon
