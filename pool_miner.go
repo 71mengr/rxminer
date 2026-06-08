@@ -1,3 +1,6 @@
+//go:build legacy_pool_miner
+// +build legacy_pool_miner
+
 package main
 
 import (

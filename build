@@ -21,10 +21,11 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "Usage:"
     echo "  ./rxminer --help"
-    echo "  ./rxminer -rpc http://127.0.0.1:8545 -threads 4 -boost"
+    echo "  ./rxminer -address 0xYourAddress -rpc http://127.0.0.1:8545 -threads 4 -boost"
+    echo "  ./rxminer -pool pool.example.com:3333 -address 0xYourAddress -threads 4 -boost"
     echo ""
     echo "To enable large pages (run as root):"
-    echo "  sudo ./rxminer -boost"
+    echo "  sudo ./rxminer -address 0xYourAddress -boost"
 else
     echo "❌ Build failed!"
     exit 1
