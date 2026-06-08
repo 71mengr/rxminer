@@ -123,18 +123,7 @@ defer cache.Close()
 cache.Init(initialWork.SeedHash)
 fmt.Printf("✅ Thread %d: Cache ready\n", threadID)
 
-dataset := randomx.NewDataset(flags)
-if dataset != nil {
-dataset.Init(cache, 0, 0)
-fmt.Printf("✅ Thread %d: Dataset ready (fast mode)\n", threadID)
-}
-defer func() {
-if dataset != nil {
-dataset.Close()
-}
-}()
-
-vm := randomx.NewVM(flags, cache, dataset)
+vm := randomx.NewVM(flags, cache, nil)
 if vm == nil {
 fmt.Printf("❌ Thread %d: Failed to create VM\n", threadID)
 return
@@ -155,18 +144,16 @@ for atomic.LoadInt32(&m.stop) == 0 {
 if hashes%10000 == 0 {
 newWork, err := m.GetWork()
 if err == nil && !bytesEqual(newWork.SealHash, work.SealHash) {
+oldSeed := work.SeedHash
 work = newWork
+if !bytesEqual(oldSeed, work.SeedHash) {
 cache.Init(work.SeedHash)
-if dataset != nil {
-dataset.Init(cache, 0, 0)
 }
 fmt.Printf("�� Thread %d: New job - height %d\n", threadID, work.Height)
 }
 }
 
-copy(input[:32], work.SealHash)
-binary.BigEndian.PutUint64(input[32:], nonce)
-
+input = buildMiningInput(input, work.SealHash, nonce)
 vm.CalculateHash(input, output)
 
 hashes++
@@ -239,6 +226,29 @@ if len(s) >= 2 && s[:2] == "0x" {
 return s[2:]
 }
 return s
+}
+
+func buildMiningInput(input, blob []byte, nonce uint64) []byte {
+if len(blob) >= 43 {
+if cap(input) < len(blob) {
+input = make([]byte, len(blob))
+}
+input = input[:len(blob)]
+copy(input, blob)
+binary.LittleEndian.PutUint32(input[39:43], uint32(nonce))
+return input
+}
+
+if len(input) < 40 {
+input = make([]byte, 40)
+}
+input = input[:40]
+for i := range input {
+input[i] = 0
+}
+copy(input[:32], blob)
+binary.BigEndian.PutUint64(input[32:], nonce)
+return input
 }
 
 func hexToBig(hexStr string) *big.Int {
