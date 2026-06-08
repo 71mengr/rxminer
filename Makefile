@@ -49,3 +49,12 @@ run-pool: build-pool
 clean:
 	@rm -f rxminer rxminer-pool
 	@echo "✅ Clean complete"
+
+build-pool-server: build-randomx
+	@echo "=== Building Pool Server ==="
+	@CGO_ENABLED=1 CGO_CFLAGS="-I$(MINER_DIR)/randomx -I$(RANDOMX_DIR)/src" CGO_LDFLAGS="-L$(RANDOMX_BUILD) -lrandomx -lstdc++ -lm" \
+		go build -tags "cgo randomx" -o rxpool ./cmd/pool/main.go
+	@echo "✅ Pool server built"
+
+run-pool-server: build-pool-server
+	@./rxpool -config config_pool.json -webport 8080

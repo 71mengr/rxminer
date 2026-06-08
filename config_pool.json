@@ -1,0 +1,29 @@
+{
+"pool": {
+"listen": ":3333",
+"difficulty": 1000,
+"maxConn": 100,
+"timeout": "30s",
+"name": "TkmChain Pool",
+"fee": 1
+},
+"daemon": {
+"url": "http://127.0.0.1:8545",
+"address": "0xc40F4A0b4df81F8f67A88B179a8b2271107a9ac2"
+},
+"redis": {
+"url": "redis://localhost:6379",
+"password": "",
+"db": 0
+},
+"payments": {
+"enabled": true,
+"interval": 300,
+"minPayout": 1000000000000000000,
+"gasPrice": 1000000000
+},
+"randomx": {
+"enabled": true,
+"epochLength": 2048
+}
+}

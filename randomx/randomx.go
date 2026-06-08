@@ -89,14 +89,37 @@ var cDataset *C.randomx_dataset
 if cache != nil {
 cCache = cache.ptr
 }
-if dataset != nil {
+if dataset != nil && flags&RANDOMX_FLAG_FULL_MEM != 0 {
 cDataset = dataset.ptr
 }
-vm := C.randomx_create_vm(C.randomx_flags(flags), cCache, cDataset)
-if vm == nil {
+for _, candidateFlags := range vmFlagFallbacks(flags) {
+vm := C.randomx_create_vm(C.randomx_flags(candidateFlags), cCache, cDataset)
+if vm != nil {
+return &VM{ptr: vm}
+}
+}
 return nil
 }
-return &VM{ptr: vm}
+
+func vmFlagFallbacks(flags int) []int {
+fallbacks := make([]int, 0, 8)
+seen := make(map[int]bool, 8)
+for _, candidate := range []int{
+flags,
+flags &^ RANDOMX_FLAG_LARGE_PAGES,
+flags &^ RANDOMX_FLAG_HARD_AES,
+flags &^ (RANDOMX_FLAG_LARGE_PAGES | RANDOMX_FLAG_HARD_AES),
+flags &^ RANDOMX_FLAG_JIT,
+flags &^ (RANDOMX_FLAG_LARGE_PAGES | RANDOMX_FLAG_JIT),
+flags &^ (RANDOMX_FLAG_HARD_AES | RANDOMX_FLAG_JIT),
+flags &^ (RANDOMX_FLAG_LARGE_PAGES | RANDOMX_FLAG_HARD_AES | RANDOMX_FLAG_JIT),
+} {
+if !seen[candidate] {
+fallbacks = append(fallbacks, candidate)
+seen[candidate] = true
+}
+}
+return fallbacks
 }
 
 func (vm *VM) CalculateHash(input, output []byte) {
