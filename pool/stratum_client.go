@@ -6,6 +6,8 @@ import (
 "encoding/json"
 "fmt"
 "net"
+"net/url"
+"strings"
 "sync"
 "time"
 )
@@ -28,15 +30,20 @@ Method string          `json:"method"`
 Params json.RawMessage `json:"params"`
 }
 
-func NewStratumClient(url, address, password string) (*StratumClient, error) {
-conn, err := net.Dial("tcp", url)
+func NewStratumClient(rawURL, address, password string) (*StratumClient, error) {
+poolAddress, err := normalizePoolAddress(rawURL)
+if err != nil {
+return nil, err
+}
+
+conn, err := net.Dial("tcp", poolAddress)
 if err != nil {
 return nil, fmt.Errorf("failed to connect to pool: %v", err)
 }
 
 client := &StratumClient{
 conn:     conn,
-url:      url,
+url:      rawURL,
 address:  address,
 password: password,
 }
@@ -51,6 +58,23 @@ return nil, err
 go client.listen()
 
 return client, nil
+}
+
+func normalizePoolAddress(rawURL string) (string, error) {
+if !strings.Contains(rawURL, "://") {
+return rawURL, nil
+}
+
+parsed, err := url.Parse(rawURL)
+if err != nil {
+return "", fmt.Errorf("invalid pool URL: %v", err)
+}
+
+if parsed.Host == "" {
+return "", fmt.Errorf("invalid pool URL: missing host")
+}
+
+return parsed.Host, nil
 }
 
 func (c *StratumClient) login() error {
